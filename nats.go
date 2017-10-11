@@ -16,22 +16,22 @@ type natsEventStore struct {
 	conn stan.Conn
 }
 
-func (n *natsEventStore) Publish(message proto.Message, subject, coorlationID, signature string) error {
+func (n *natsEventStore) Publish(message proto.Message, subject, coorlationID, signature fmt.Stringer) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
 
 	data, err := proto.Marshal(&pb.Transport{
-		CoorlationId: coorlationID,
-		Signature:    signature,
+		CoorlationId: coorlationID.String(),
+		Signature:    signature.String(),
 		Payload:      payload,
 	})
 	if err != nil {
 		return err
 	}
 
-	return n.conn.Publish(subject, data)
+	return n.conn.Publish(subject.String(), data)
 }
 
 func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, error) {

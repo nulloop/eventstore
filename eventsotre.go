@@ -1,6 +1,8 @@
 package eventstore
 
 import (
+	"fmt"
+
 	proto "github.com/golang/protobuf/proto"
 )
 
@@ -24,7 +26,7 @@ type Unsubscribe func() error
 
 // EventStore base interface
 type EventStore interface {
-	Publish(message proto.Message, subject, coorlationID, signature string) error
+	Publish(message proto.Message, subject, coorlationID, signature fmt.Stringer) error
 	Subscribe(subOptions *Subscription) (Unsubscribe, error)
 	Close() error
 }
