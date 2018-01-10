@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/alinz/eventstore/proto"
 	proto "github.com/golang/protobuf/proto"
 	nats "github.com/nats-io/go-nats"
 	stan "github.com/nats-io/go-nats-streaming"
+	pb "github.com/nulloop/eventstore/proto"
 )
 
 type natsEventStore struct {
