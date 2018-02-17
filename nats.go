@@ -71,10 +71,9 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 	var err error
 	var subscriptionHandler stan.Subscription
 
-	var options []stan.SubscriptionOption
-	options = append(options, stan.DurableName(subscription.DurableName))
-	if subscription.Sequence != 0 {
-		options = append(options, stan.StartAtSequence(subscription.Sequence))
+	options := []stan.SubscriptionOption{
+		stan.DurableName(subscription.DurableName),
+		stan.StartAtSequence(subscription.Sequence),
 	}
 
 	if subscription.QueueName == "" {
