@@ -95,7 +95,12 @@ func (n *natsEventStore) Close() error {
 
 // NewNatsStreaming creates a nee eventstore
 func NewNatsStreaming(tlsConfig *tls.Config, addr, clusterID, clientID string) (EventStore, error) {
-	nc, err := nats.Connect(addr, nats.Secure(tlsConfig))
+	opts := make([]nats.Option, 0)
+	if tlsConfig != nil {
+		opts = append(opts, nats.Secure(tlsConfig))
+	}
+
+	nc, err := nats.Connect(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

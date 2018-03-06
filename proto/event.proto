@@ -7,3 +7,19 @@ message Transport {
   string signature = 2;
   bytes payload = 3;
 }
+
+// the following DummyMessage and Dummy enum are only used in 
+// tests
+
+message DummyMessage {
+  string value = 1;
+}
+
+enum Dummy {
+  Subject1 = 0;
+  QueueName1 = 1;
+  DurableName1 = 2;
+  Subject2 = 3;
+  QueueName2 = 4;
+  DurableName2 = 5;
+}
