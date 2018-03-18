@@ -16,16 +16,16 @@ type natsEventStore struct {
 	conn stan.Conn
 }
 
-func (n *natsEventStore) Publish(message proto.Message, subject, coorlationID, signature fmt.Stringer) error {
+func (n *natsEventStore) Publish(message proto.Message, subject, correlation, signature fmt.Stringer) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
 
 	data, err := proto.Marshal(&pb.Transport{
-		CoorlationId: coorlationID.String(),
-		Signature:    signature.String(),
-		Payload:      payload,
+		CorrelationId: correlation.String(),
+		Signature:     signature.String(),
+		Payload:       payload,
 	})
 	if err != nil {
 		return err
@@ -36,19 +36,19 @@ func (n *natsEventStore) Publish(message proto.Message, subject, coorlationID, s
 
 func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, error) {
 	if subscription.DurableName == "" {
-		return nil, fmt.Errorf("durable name not set")
+		return nil, ErrDurableNameNotSet
 	}
 
 	if subscription.Handler == nil {
-		return nil, fmt.Errorf("handler not set")
+		return nil, ErrHandlerNotSet
 	}
 
 	if subscription.Message == nil {
-		return nil, fmt.Errorf("message not set")
+		return nil, ErrMessageNotSet
 	}
 
 	if subscription.Subject == "" {
-		return nil, fmt.Errorf("subject not set")
+		return nil, ErrSubjectNotSet
 	}
 
 	transport := pb.Transport{}
@@ -65,7 +65,7 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 			return
 		}
 
-		subscription.Handler(subscription.Message, msg.Sequence, transport.CoorlationId, transport.Signature)
+		subscription.Handler(subscription.Message, msg.Sequence, transport.CorrelationId, transport.Signature)
 	}
 
 	var err error

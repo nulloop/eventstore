@@ -64,7 +64,7 @@ func TestCreateEventStore(t *testing.T) {
 		Subject:     pb.Dummy_Subject1.String(),
 		DurableName: pb.Dummy_DurableName1.String(),
 		QueueName:   pb.Dummy_QueueName1.String(),
-		Handler: func(message proto.Message, sequenceID uint64, coorlationID, signature string) {
+		Handler: func(message proto.Message, sequenceID uint64, correlationID, signature string) {
 			dummyMessage, ok := message.(*pb.DummyMessage)
 			if !ok {
 				t.Error("message is not DummyMessage")
