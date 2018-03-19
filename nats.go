@@ -2,7 +2,6 @@ package eventstore
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"time"
 
@@ -16,22 +15,22 @@ type natsEventStore struct {
 	conn stan.Conn
 }
 
-func (n *natsEventStore) Publish(message proto.Message, subject, correlation, signature fmt.Stringer) error {
+func (n *natsEventStore) Publish(message proto.Message, subject, correlation, signature string) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
 
 	data, err := proto.Marshal(&pb.Transport{
-		CorrelationId: correlation.String(),
-		Signature:     signature.String(),
+		CorrelationId: correlation,
+		Signature:     signature,
 		Payload:       payload,
 	})
 	if err != nil {
 		return err
 	}
 
-	return n.conn.Publish(subject.String(), data)
+	return n.conn.Publish(subject, data)
 }
 
 func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, error) {
@@ -65,7 +64,12 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 			return
 		}
 
-		subscription.Handler(subscription.Message, msg.Sequence, transport.CorrelationId, transport.Signature)
+		err = subscription.Handler(subscription.Message, msg.Sequence, transport.CorrelationId, transport.Signature)
+		if err == nil {
+			if err = msg.Ack(); err != nil {
+				log.Printf("error ack message for %v, %s\n", msg, err)
+			}
+		}
 	}
 
 	var err error
@@ -74,6 +78,12 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 	options := []stan.SubscriptionOption{
 		stan.DurableName(subscription.DurableName),
 		stan.StartAtSequence(subscription.Sequence),
+		stan.SetManualAckMode(),
+	}
+
+	// aw, _ := time.ParseDuration("5s")
+	if subscription.Timeout != 0 {
+		options = append(options, stan.AckWait(subscription.Timeout))
 	}
 
 	if subscription.QueueName == "" {
