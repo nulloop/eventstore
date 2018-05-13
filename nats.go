@@ -64,7 +64,14 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 			return
 		}
 
-		err = subscription.Handler(subscription.Message, msg.Sequence, transport.CorrelationId, transport.Signature)
+		err = subscription.Handler(&Payload{
+			Message:       subscription.Message,
+			SequenceID:    msg.Sequence,
+			CorrelationID: transport.CorrelationId,
+			Signature:     transport.Signature,
+			Timestamp:     msg.Timestamp,
+		})
+
 		if err == nil {
 			if err = msg.Ack(); err != nil {
 				log.Printf("error ack message for %v, %s\n", msg, err)

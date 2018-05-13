@@ -26,10 +26,18 @@ type Subscription struct {
 	Message     proto.Message
 }
 
+type Payload struct {
+	Message       proto.Message
+	SequenceID    uint64
+	CorrelationID string
+	Signature     string
+	Timestamp     int64
+}
+
 // Handler is a function which will be called once the the subject type is received
 // if an error return, the message will be redeliver again to the same handler or
 // another handler
-type Handler func(message proto.Message, sequenceID uint64, correlationID, signature string) error
+type Handler func(payload *Payload) error
 
 // Unsubscribe removes the handler from EventStore
 // it should clean up durable name az well
