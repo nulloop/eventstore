@@ -5,7 +5,8 @@ package event;
 message Transport {
   string correlationId = 1;
   string signature = 2;
-  bytes payload = 3;
+  string topic = 3;
+  bytes payload = 4;
 }
 
 // the following DummyMessage and Dummy enum are only used in 

@@ -14,16 +14,21 @@ var (
 	ErrSubjectNotSet     = fmt.Errorf("subject not set")
 )
 
+type Subject interface {
+	Validate(string) bool
+	String() string
+}
+
 // Subscription is a basic struct to define
 // single subscription
 type Subscription struct {
-	Timeout     time.Duration // optional, default will be any default timeout realted to implementation
-	Sequence    uint64        // optional, default is zero (beginning of data events)
-	Subject     string
+	Subject     Subject
 	DurableName string
-	QueueName   string // optional
 	Handler     Handler
 	Message     proto.Message
+	Timeout     time.Duration // optional, default will be any default timeout realted to implementation
+	Sequence    uint64        // optional, default is zero (beginning of data events)
+	QueueName   string        // optional
 }
 
 type Payload struct {
@@ -31,7 +36,7 @@ type Payload struct {
 	SequenceID    uint64
 	CorrelationID string
 	Signature     string
-	Timestamp     int64
+	Timestamp     int64 // this value will be set when a message received. It has a noop on Publish
 }
 
 // Handler is a function which will be called once the the subject type is received
@@ -45,7 +50,7 @@ type Unsubscribe func() error
 
 // EventStore base interface
 type EventStore interface {
-	Publish(message proto.Message, subject, correlationID, signature string) error
+	Publish(payload *Payload, subject Subject) error
 	Subscribe(subOptions *Subscription) (Unsubscribe, error)
 	Close() error
 }

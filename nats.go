@@ -3,6 +3,7 @@ package eventstore
 import (
 	"crypto/tls"
 	"log"
+	"reflect"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -15,22 +16,22 @@ type natsEventStore struct {
 	conn stan.Conn
 }
 
-func (n *natsEventStore) Publish(message proto.Message, subject, correlation, signature string) error {
-	payload, err := proto.Marshal(message)
+func (n *natsEventStore) Publish(payload *Payload, subject Subject) error {
+	rawPayload, err := proto.Marshal(payload.Message)
 	if err != nil {
 		return err
 	}
 
 	data, err := proto.Marshal(&pb.Transport{
-		CorrelationId: correlation,
-		Signature:     signature,
-		Payload:       payload,
+		CorrelationId: payload.CorrelationID,
+		Signature:     payload.Signature,
+		Payload:       rawPayload,
 	})
 	if err != nil {
 		return err
 	}
 
-	return n.conn.Publish(subject, data)
+	return n.conn.Publish(subject.String(), data)
 }
 
 func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, error) {
@@ -46,7 +47,7 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 		return nil, ErrMessageNotSet
 	}
 
-	if subscription.Subject == "" {
+	if reflect.ValueOf(subscription.Subject).IsNil() {
 		return nil, ErrSubjectNotSet
 	}
 
@@ -94,9 +95,9 @@ func (n *natsEventStore) Subscribe(subscription *Subscription) (Unsubscribe, err
 	}
 
 	if subscription.QueueName == "" {
-		subscriptionHandler, err = n.conn.Subscribe(subscription.Subject, process, options...)
+		subscriptionHandler, err = n.conn.Subscribe(subscription.Subject.String(), process, options...)
 	} else {
-		subscriptionHandler, err = n.conn.QueueSubscribe(subscription.Subject, subscription.QueueName, process, options...)
+		subscriptionHandler, err = n.conn.QueueSubscribe(subscription.Subject.String(), subscription.QueueName, process, options...)
 	}
 
 	if err != nil {

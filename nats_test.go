@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
 	nats "github.com/nats-io/go-nats"
 	"github.com/nats-io/nats-streaming-server/server"
 	"github.com/nulloop/eventstore"
@@ -19,8 +18,23 @@ const (
 	durableName2 = "durableName2"
 	queueName1   = "queueName1"
 	queueName2   = "queueName2"
-	subjectName1 = "subjectName1"
-	subjectName2 = "subjectName2"
+)
+
+type MySubject struct {
+	value string
+}
+
+func (s *MySubject) Validate(value string) bool {
+	return true
+}
+
+func (s *MySubject) String() string {
+	return s.value
+}
+
+var (
+	subject1 eventstore.Subject = &MySubject{"subjectName1"}
+	subject2 eventstore.Subject = &MySubject{"subjectName2"}
 )
 
 func genRandomStringer() string {
@@ -68,13 +82,13 @@ func TestCreateEventStore(t *testing.T) {
 
 	unsubscribe, err := es.Subscribe(&eventstore.Subscription{
 		Message:     &pb.DummyMessage{},
-		Subject:     subjectName1,
+		Subject:     subject1,
 		DurableName: durableName1,
 		QueueName:   queueName1,
-		Handler: func(message proto.Message, sequenceID uint64, correlationID, signature string) error {
+		Handler: func(payload *eventstore.Payload) error {
 			defer wg.Done()
 
-			dummyMessage, ok := message.(*pb.DummyMessage)
+			dummyMessage, ok := payload.Message.(*pb.DummyMessage)
 			if !ok {
 				t.Error("message is not DummyMessage")
 			}
@@ -94,10 +108,12 @@ func TestCreateEventStore(t *testing.T) {
 	defer unsubscribe()
 
 	es.Publish(
-		&pb.DummyMessage{Value: "this is test"},
-		subjectName1,
-		genRandomStringer(),
-		genRandomStringer(),
+		&eventstore.Payload{
+			Message:       &pb.DummyMessage{Value: "this is test"},
+			CorrelationID: genRandomStringer(),
+			Signature:     genRandomStringer(),
+		},
+		subject1,
 	)
 
 	wg.Wait()
@@ -123,11 +139,11 @@ func TestAckQueueMessage(t *testing.T) {
 
 	unsubscribe1, err := es.Subscribe(&eventstore.Subscription{
 		Message:     &pb.DummyMessage{},
-		Subject:     subjectName1,
+		Subject:     subject1,
 		DurableName: durableName1,
 		QueueName:   queueName1,
 		Timeout:     1 * time.Second,
-		Handler: func(message proto.Message, sequenceID uint64, correlationID, signature string) error {
+		Handler: func(payload *eventstore.Payload) error {
 			return fmt.Errorf("noop")
 		},
 	})
@@ -140,14 +156,14 @@ func TestAckQueueMessage(t *testing.T) {
 
 	unsubscribe2, err := es.Subscribe(&eventstore.Subscription{
 		Message:     &pb.DummyMessage{},
-		Subject:     subjectName1,
+		Subject:     subject1,
 		DurableName: durableName1,
 		QueueName:   queueName1,
 		Timeout:     2 * time.Second,
-		Handler: func(message proto.Message, sequenceID uint64, correlationID, signature string) error {
+		Handler: func(payload *eventstore.Payload) error {
 			defer wg.Done()
 
-			dummyMessage, ok := message.(*pb.DummyMessage)
+			dummyMessage, ok := payload.Message.(*pb.DummyMessage)
 			if !ok {
 				t.Error("message is not DummyMessage")
 			}
@@ -167,10 +183,12 @@ func TestAckQueueMessage(t *testing.T) {
 	defer unsubscribe2()
 
 	es.Publish(
-		&pb.DummyMessage{Value: "this is test"},
-		subjectName1,
-		genRandomStringer(),
-		genRandomStringer(),
+		&eventstore.Payload{
+			Message:       &pb.DummyMessage{Value: "this is test"},
+			CorrelationID: genRandomStringer(),
+			Signature:     genRandomStringer(),
+		},
+		subject1,
 	)
 
 	wg.Wait()
