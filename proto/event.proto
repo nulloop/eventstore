@@ -3,9 +3,7 @@ syntax = "proto3";
 package event;
 
 message Transport {
-  string correlationId = 1;
-  string signature = 2;
-  string topic = 3;
+  string id = 1;
   bytes payload = 4;
 }
 
