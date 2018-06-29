@@ -28,10 +28,10 @@ func (n *Subject) Clone(options ...Option) (*Subject, error) {
 		return nil, err
 	}
 
-	subject.durable = n.durable
+	subject.durable = ""
 	subject.queue = n.queue
-	subject.sequence = n.sequence
-	subject.msgInstance = n.msgInstance
+	subject.sequence = 0
+	subject.msgInstance = nil
 
 	for _, option := range options {
 		option(subject)
