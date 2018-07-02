@@ -40,6 +40,10 @@ func (n *Subject) Clone(options ...Option) (*Subject, error) {
 	return subject, nil
 }
 
+func (n *Subject) UpdateSequence(sequence uint64) {
+	n.sequence = sequence
+}
+
 type Option func(*Subject)
 
 func OptQueueName(name string) Option {
