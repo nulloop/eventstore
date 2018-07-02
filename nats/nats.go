@@ -74,6 +74,7 @@ func (n *NatsEventstore) Subscribe(subject eventstore.Subject, handler eventstor
 
 		err = handler(&Payload{
 			id:        transport.Id,
+			subject:   subject,
 			message:   natsSubject.msgInstance,
 			sequence:  msg.Sequence,
 			timestamp: msg.Timestamp,
