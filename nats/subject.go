@@ -2,47 +2,38 @@ package nats
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/gogo/protobuf/proto"
 )
 
 var (
-	ErrTopicEmpty   = fmt.Errorf("topic is empty")
-	ErrMessageEmpty = fmt.Errorf("message is empty")
+	ErrTopicNotSet      = fmt.Errorf("topic not set")
+	ErrMsgBuilderNotSet = fmt.Errorf("message builder not set")
 )
+
+type MsgBuilder func() proto.Message
 
 type Subject struct {
 	topic       string
-	durable     string
-	queue       string
-	sequence    uint64
+	msgBuilder  MsgBuilder
 	msgInstance proto.Message
+
+	durable  string
+	queue    string
+	sequence uint64
 }
 
 func (n *Subject) Topic() string {
 	return n.topic
 }
 
-func (n *Subject) Clone(options ...Option) (*Subject, error) {
-	subject, err := NewSubject(n.topic)
+func (n *Subject) Instance(options ...Option) (*Subject, error) {
+	subject, err := NewSubject(n.topic, n.msgBuilder, options...)
 	if err != nil {
 		return nil, err
 	}
 
-	subject.durable = ""
-	subject.queue = ""
-	subject.sequence = 0
-	subject.msgInstance = nil
-
-	for _, option := range options {
-		option(subject)
-	}
-
-	if subject.msgInstance == nil || reflect.ValueOf(subject.msgInstance).IsNil() {
-		return nil, ErrMessageEmpty
-	}
-
+	subject.msgInstance = subject.msgBuilder()
 	return subject, nil
 }
 
@@ -64,25 +55,20 @@ func OptDurableName(name string) Option {
 	}
 }
 
-func OptMessageInstance(msg proto.Message) Option {
-	return func(subject *Subject) {
-		subject.msgInstance = msg
-	}
-}
-
 func OptSequence(sequence uint64) Option {
 	return func(subject *Subject) {
 		subject.sequence = sequence
 	}
 }
 
-func NewSubject(topic string, options ...Option) (*Subject, error) {
+func NewSubject(topic string, msgBuilder MsgBuilder, options ...Option) (*Subject, error) {
 	if topic == "" {
-		return nil, ErrTopicEmpty
+		return nil, ErrTopicNotSet
 	}
 
 	subject := &Subject{
-		topic: topic,
+		topic:      topic,
+		msgBuilder: msgBuilder,
 	}
 
 	for _, option := range options {

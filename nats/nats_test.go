@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	gonats "github.com/nats-io/go-nats"
 	"github.com/nats-io/nats-streaming-server/server"
 
@@ -22,6 +23,10 @@ const (
 	subject1 string = "subjectName1"
 	subject2 string = "subjectName2"
 )
+
+func dummyMessageBuilder() proto.Message {
+	return &pb.DummyMessage{}
+}
 
 func genRandomStringer() string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -66,7 +71,7 @@ func TestCreateEventStore(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	subject, err := nats.NewSubject(subject1, nats.OptMessageInstance(&pb.DummyMessage{}), nats.OptSequence(0))
+	subject, err := nats.NewSubject(subject1, dummyMessageBuilder, nats.OptSequence(0))
 	if err != nil {
 		t.Error(err)
 	}
