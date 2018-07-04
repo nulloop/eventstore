@@ -2,12 +2,14 @@ package nats
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/gogo/protobuf/proto"
 )
 
 var (
-	ErrTopicEmpty = fmt.Errorf("topic is empty")
+	ErrTopicEmpty   = fmt.Errorf("topic is empty")
+	ErrMessageEmpty = fmt.Errorf("message is empty")
 )
 
 type Subject struct {
@@ -29,12 +31,16 @@ func (n *Subject) Clone(options ...Option) (*Subject, error) {
 	}
 
 	subject.durable = ""
-	subject.queue = n.queue
+	subject.queue = ""
 	subject.sequence = 0
 	subject.msgInstance = nil
 
 	for _, option := range options {
 		option(subject)
+	}
+
+	if subject.msgInstance == nil || reflect.ValueOf(subject.msgInstance).IsNil() {
+		return nil, ErrMessageEmpty
 	}
 
 	return subject, nil
