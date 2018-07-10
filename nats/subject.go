@@ -9,6 +9,7 @@ import (
 var (
 	ErrTopicNotSet      = fmt.Errorf("topic not set")
 	ErrMsgBuilderNotSet = fmt.Errorf("message builder not set")
+	ErrInstanceIDNotSet = fmt.Errorf("instance id not set")
 )
 
 type MsgBuilder func() proto.Message
@@ -27,10 +28,19 @@ func (n *Subject) Topic() string {
 	return n.topic
 }
 
-func (n *Subject) Instance(options ...Option) (*Subject, error) {
+func (n *Subject) Instance(instanceID string, options ...Option) (*Subject, error) {
+	if instanceID == "" {
+		return nil, ErrInstanceIDNotSet
+	}
+
 	subject, err := NewSubject(n.topic, n.msgBuilder, options...)
 	if err != nil {
 		return nil, err
+	}
+
+	// durable name is unique per instance
+	if subject.durable != "" {
+		subject.durable = fmt.Sprintf("%s.%s", subject.durable, instanceID)
 	}
 
 	subject.msgInstance = subject.msgBuilder()
