@@ -4,6 +4,10 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+// Flag is simple function which tries to change
+// the behaviour of EventStore internally
+type Flag func(EventStore) error
+
 // Container is a common interface for eventstore event's payload
 type Container interface {
 	ID() string // ID can be used as correlation
