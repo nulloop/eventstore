@@ -25,17 +25,9 @@ var (
 
 type NatsEventstore struct {
 	conn stan.Conn
-
-	publishEnabled *AtomicBool
 }
 
 func (n *NatsEventstore) Publish(payload eventstore.Container) error {
-	// PublishEnableFlag or PublishDisableFlag must be use to
-	// toggle this
-	if !n.publishEnabled.Value() {
-		return nil
-	}
-
 	message, err := proto.Marshal(payload.Message())
 	if err != nil {
 		return err
@@ -63,7 +55,7 @@ func (n *NatsEventstore) Subscribe(subject eventstore.Subject, handler eventstor
 	}
 
 	if natsSubject.msgInstance == nil {
-		return nil, ErrMessageInstanceNil
+		natsSubject.msgInstance = natsSubject.msgBuilder()
 	}
 
 	transport := pb.Transport{}
@@ -158,7 +150,6 @@ func New(tlsConfig *tls.Config, addr, clusterID, clientID string) (*NatsEventsto
 	}
 
 	return &NatsEventstore{
-		conn:           conn,
-		publishEnabled: NewAtomicBool(),
+		conn: conn,
 	}, nil
 }

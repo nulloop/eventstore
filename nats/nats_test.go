@@ -54,14 +54,14 @@ func TestRunDummyServer(t *testing.T) {
 }
 
 func TestCreateEventStore(t *testing.T) {
-	server, err := runDummyServer("dummy")
+	server, err := runDummyServer("dummy_server")
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer server.Shutdown()
 
-	es, err := nats.New(nil, gonats.DefaultURL, "dummy", "client1")
+	es, err := nats.New(nil, gonats.DefaultURL, "dummy_server", "client1")
 	if err != nil {
 		t.Error(err)
 	}
@@ -93,11 +93,15 @@ func TestCreateEventStore(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	defer unsubscribe()
 
-	es.Publish(eventstore.NewPayload(subject, &pb.DummyMessage{Value: "this is test"}, "1"))
+	err = es.Publish(eventstore.NewPayload(subject, &pb.DummyMessage{Value: "this is test"}, "1"))
+	if err != nil {
+		t.Error(err)
+	}
 
 	wg.Wait()
 }
