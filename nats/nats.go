@@ -24,10 +24,16 @@ var (
 )
 
 type NatsEventstore struct {
-	conn stan.Conn
+	conn   stan.Conn
+	active bool
+	signal *Signal
 }
 
 func (n *NatsEventstore) Publish(payload eventstore.Container) error {
+	if !n.active {
+		return nil
+	}
+
 	message, err := proto.Marshal(payload.Message())
 	if err != nil {
 		return err
@@ -72,13 +78,20 @@ func (n *NatsEventstore) Subscribe(subject eventstore.Subject, handler eventstor
 			return
 		}
 
-		err = handler(&Payload{
+		payload := &Payload{
 			id:        transport.Id,
 			subject:   subject,
 			message:   natsSubject.msgInstance,
 			sequence:  msg.Sequence,
 			timestamp: msg.Timestamp,
-		})
+			active:    n.active,
+		}
+
+		if !n.active {
+			n.signal.Push(payload)
+		}
+
+		err = handler(payload)
 
 		if err == nil {
 			if err = msg.Ack(); err != nil {
@@ -121,8 +134,12 @@ func (n *NatsEventstore) Close() error {
 	return n.conn.Close()
 }
 
-// New creates a nee eventstore
-func New(tlsConfig *tls.Config, addr, clusterID, clientID string) (*NatsEventstore, error) {
+func (n *NatsEventstore) activate() {
+	n.active = true
+}
+
+// New creates a new eventstore
+func New(tlsConfig *tls.Config, addr, clusterID, clientID string, cond SignalCond) (*NatsEventstore, error) {
 	opts := make([]gonats.Option, 0)
 	if tlsConfig != nil {
 		opts = append(opts, gonats.Secure(tlsConfig))
@@ -149,7 +166,15 @@ func New(tlsConfig *tls.Config, addr, clusterID, clientID string) (*NatsEventsto
 		break
 	}
 
-	return &NatsEventstore{
-		conn: conn,
-	}, nil
+	natsEventStore := &NatsEventstore{
+		conn:   conn,
+		active: true,
+	}
+
+	if cond != nil {
+		natsEventStore.active = false
+		natsEventStore.signal = NewSignal(cond, natsEventStore.activate)
+	}
+
+	return natsEventStore, nil
 }

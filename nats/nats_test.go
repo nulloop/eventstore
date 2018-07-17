@@ -61,7 +61,7 @@ func TestCreateEventStore(t *testing.T) {
 
 	defer server.Shutdown()
 
-	es, err := nats.New(nil, gonats.DefaultURL, "dummy_server", "client1")
+	es, err := nats.New(nil, gonats.DefaultURL, "dummy_server", "client1", nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -98,12 +98,108 @@ func TestCreateEventStore(t *testing.T) {
 
 	defer unsubscribe()
 
-	err = es.Publish(eventstore.NewPayload(subject, &pb.DummyMessage{Value: "this is test"}, "1"))
+	err = es.Publish(nats.NewPayload(subject, &pb.DummyMessage{Value: "this is test"}, "1"))
 	if err != nil {
 		t.Error(err)
 	}
 
 	wg.Wait()
+}
+
+func TestWarmup(t *testing.T) {
+	subject, err := nats.NewSubject(subject1, dummyMessageBuilder, nats.OptSequence(0))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// the following code will
+	// add 3 method to the server
+
+	server, err := runDummyServer("dummy_server")
+	if err != nil {
+		t.Error(err)
+	}
+
+	es, err := nats.New(nil, gonats.DefaultURL, "dummy_server", "client1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	instanceSubject, err := subject.Instance("test1", nats.OptQueueName("test1"), nats.OptDurableName("test1.durable"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	es.Subscribe(instanceSubject, func(payload eventstore.Container) error {
+		return nil
+	})
+
+	err = es.Publish(nats.NewPayload(subject, &pb.DummyMessage{Value: "this is test 1"}, "1"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = es.Publish(nats.NewPayload(subject, &pb.DummyMessage{Value: "this is test 2"}, "2"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = es.Publish(nats.NewPayload(subject, &pb.DummyMessage{Value: "this is test 3"}, "3"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	es.Close()
+
+	// this is the actual test
+	es, err = nats.New(nil, gonats.DefaultURL, "dummy_server", "client1", func(container eventstore.Container) bool {
+		return container.ID() == "2"
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	instanceSubject, err = subject.Instance("test1", nats.OptQueueName("test1"), nats.OptDurableName("test1.durable"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	es.Subscribe(instanceSubject, func(payload eventstore.Container) error {
+		switch payload.ID() {
+		case "1":
+			if payload.ActiveMode() == true {
+				t.Error("first message must be received in not active mode")
+			}
+		case "2":
+			if payload.ActiveMode() == true {
+				t.Error("second message must be received in not active mode")
+			}
+		case "3":
+			if payload.ActiveMode() == false {
+				t.Error("third1 message must be received in active mode")
+			}
+		}
+		wg.Done()
+
+		return nil
+	})
+
+	wg.Wait()
+
+	es.Close()
+	server.Shutdown()
+
+	// es, err := nats.New(nil, gonats.DefaultURL, "dummy_server", "client1", func(container eventstore.Container) bool {
+	// 	return true
+	// })
+
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// defer es.Close()
 }
 
 // func TestAckQueueMessage(t *testing.T) {

@@ -11,6 +11,7 @@ type Payload struct {
 	sequence  uint64
 	timestamp int64
 	message   proto.Message
+	active    bool
 }
 
 func (p *Payload) ID() string {
@@ -33,8 +34,13 @@ func (p *Payload) Message() proto.Message {
 	return p.message
 }
 
-func NewPayload(subject eventstore.Subject, message proto.Message) *Payload {
+func (p *Payload) ActiveMode() bool {
+	return p.active
+}
+
+func NewPayload(subject eventstore.Subject, message proto.Message, id string) *Payload {
 	payload := &Payload{
+		id:      id,
 		subject: subject,
 		message: message,
 	}
