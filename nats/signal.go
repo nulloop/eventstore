@@ -1,6 +1,8 @@
 package nats
 
 import (
+	"time"
+
 	"github.com/nulloop/eventstore"
 )
 
@@ -14,8 +16,9 @@ type SignalCond func(eventstore.Container) bool
 // There are multiple write which calls Push method and one condition logic which
 // consume each pushed messages and if it returns true, all the Push method becomes NOOP
 type Signal struct {
-	done chan struct{}
-	data chan eventstore.Container
+	done    chan struct{}
+	data    chan eventstore.Container
+	timeout time.Duration
 }
 
 // Push pushes message down to be checked. It becomes NOOP once the
@@ -31,15 +34,18 @@ func (s *Signal) next() (eventstore.Container, bool) {
 	select {
 	case val, ok := <-s.data:
 		return val, ok
+	case <-time.After(s.timeout):
+		return nil, false
 	}
 }
 
 // NewSignal creats Signal object and accpet cond func
 // once the cond returns true, all the Push calls becomes noop
-func NewSignal(cond SignalCond, success func()) *Signal {
+func NewSignal(cond SignalCond, success func(), timeout time.Duration) *Signal {
 	signal := &Signal{
-		done: make(chan struct{}, 1),
-		data: make(chan eventstore.Container, 1),
+		done:    make(chan struct{}, 1),
+		data:    make(chan eventstore.Container, 1),
+		timeout: timeout,
 	}
 
 	go func() {
@@ -52,6 +58,9 @@ func NewSignal(cond SignalCond, success func()) *Signal {
 					success()
 					break
 				}
+			} else {
+				success()
+				break
 			}
 		}
 	}()

@@ -23,6 +23,14 @@ var (
 	ErrMessageInstanceNil = fmt.Errorf("message type is nil")
 )
 
+// WarmupOpt This is an struct that encapsulates
+// Cond and timeout.
+type WarmupOpt struct {
+	// Timeout must be presented.
+	Timeout time.Duration
+	Cond    SignalCond
+}
+
 type NatsEventstore struct {
 	conn   stan.Conn
 	active bool
@@ -143,7 +151,8 @@ func (n *NatsEventstore) activate() {
 }
 
 // New creates a new eventstore
-func New(tlsConfig *tls.Config, addr, clusterID, clientID string, cond SignalCond) (*NatsEventstore, error) {
+// warmupOpt is optional and can be set to nil if it's not required to warmup the system
+func New(tlsConfig *tls.Config, addr, clusterID, clientID string, warmupOpt *WarmupOpt) (*NatsEventstore, error) {
 	opts := make([]gonats.Option, 0)
 	if tlsConfig != nil {
 		opts = append(opts, gonats.Secure(tlsConfig))
@@ -175,9 +184,9 @@ func New(tlsConfig *tls.Config, addr, clusterID, clientID string, cond SignalCon
 		active: true,
 	}
 
-	if cond != nil {
+	if warmupOpt != nil {
 		natsEventStore.active = false
-		natsEventStore.signal = NewSignal(cond, natsEventStore.activate)
+		natsEventStore.signal = NewSignal(warmupOpt.Cond, natsEventStore.activate, warmupOpt.Timeout)
 	}
 
 	return natsEventStore, nil

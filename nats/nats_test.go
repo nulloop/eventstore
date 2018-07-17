@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	gonats "github.com/nats-io/go-nats"
@@ -151,8 +152,11 @@ func TestWarmup(t *testing.T) {
 	es.Close()
 
 	// this is the actual test
-	es, err = nats.New(nil, gonats.DefaultURL, "dummy_server", "client2", func(container eventstore.Container) bool {
-		return container.ID() == "2"
+	es, err = nats.New(nil, gonats.DefaultURL, "dummy_server", "client2", &nats.WarmupOpt{
+		Cond: func(container eventstore.Container) bool {
+			return container.ID() == "2"
+		},
+		Timeout: 10 * time.Second,
 	})
 	if err != nil {
 		t.Fatal(err)
