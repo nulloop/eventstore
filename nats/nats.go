@@ -84,12 +84,16 @@ func (n *NatsEventstore) Subscribe(subject eventstore.Subject, handler eventstor
 			message:   natsSubject.msgInstance,
 			sequence:  msg.Sequence,
 			timestamp: msg.Timestamp,
-			active:    n.active,
 		}
 
 		if !n.active {
 			n.signal.Push(payload)
 		}
+
+		// we need to set the payload.active
+		// here, because, we need to wait until
+		// signal.Push process the data
+		payload.active = n.active
 
 		err = handler(payload)
 

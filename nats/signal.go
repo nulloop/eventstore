@@ -43,15 +43,13 @@ func NewSignal(cond SignalCond, success func()) *Signal {
 	}
 
 	go func() {
-		defer func() {
-			success()
-			close(signal.done)
-		}()
+		defer close(signal.done)
 
 		for {
 			val, ok := signal.next()
 			if ok {
 				if cond(val) {
+					success()
 					break
 				}
 			}

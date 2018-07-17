@@ -151,14 +151,14 @@ func TestWarmup(t *testing.T) {
 	es.Close()
 
 	// this is the actual test
-	es, err = nats.New(nil, gonats.DefaultURL, "dummy_server", "client1", func(container eventstore.Container) bool {
+	es, err = nats.New(nil, gonats.DefaultURL, "dummy_server", "client2", func(container eventstore.Container) bool {
 		return container.ID() == "2"
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	instanceSubject, err = subject.Instance("test1", nats.OptQueueName("test1"), nats.OptDurableName("test1.durable"))
+	instanceSubject, err = subject.Instance("test1", nats.OptQueueName("test2"), nats.OptDurableName("test2.durable"))
 	if err != nil {
 		t.Fatal(err)
 	}
