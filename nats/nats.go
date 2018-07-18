@@ -29,12 +29,14 @@ type WarmupOpt struct {
 	// Timeout must be presented.
 	Timeout time.Duration
 	Cond    SignalCond
+	Done    func()
 }
 
 type NatsEventstore struct {
 	conn   stan.Conn
 	active bool
 	signal *Signal
+	done   func()
 }
 
 func (n *NatsEventstore) Publish(payload eventstore.Container) error {
@@ -148,6 +150,9 @@ func (n *NatsEventstore) Close() error {
 
 func (n *NatsEventstore) activate() {
 	n.active = true
+	if n.done != nil {
+		n.done()
+	}
 }
 
 // New creates a new eventstore
@@ -187,6 +192,7 @@ func New(tlsConfig *tls.Config, addr, clusterID, clientID string, warmupOpt *War
 	if warmupOpt != nil {
 		natsEventStore.active = false
 		natsEventStore.signal = NewSignal(warmupOpt.Cond, natsEventStore.activate, warmupOpt.Timeout)
+		natsEventStore.done = warmupOpt.Done
 	}
 
 	return natsEventStore, nil
